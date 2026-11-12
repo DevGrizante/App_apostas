@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Copy, Pencil, Send, Trash2, Wand2 } from "lucide-react";
+import { BarChart3, BookOpen, Check, Copy, Gauge, MessageSquarePlus, Moon, Pencil, Send, Sun, Trash2, Users, Wand2 } from "lucide-react";
 import {
   TIMES, interpretar, numero, liquidacao, payoffs, mtm, mensagemBatimento, linkWhatsApp,
   brl, odd, sinal, data,
@@ -21,10 +21,13 @@ const ODDS_MOCK = {
   Vasco: 60.0, Bragantino: 80.0, Santos: 80.0, Mirassol: 100.0, Ceará: 150.0, Vitória: 200.0,
   Juventude: 250.0, Sport: 300.0,
 };
-const MODOS = ["Book", "MTM", "Payoff", "Batimento"];
+const ABAS = [
+  ["Boletar", MessageSquarePlus], ["Book", BookOpen], ["MTM", Gauge], ["Payoff", BarChart3], ["Batimento", Users],
+];
 const STATUS = ["Pendente", "Batido", "Descasado"];
 const hoje = () => new Date().toISOString().slice(0, 10);
 const VAZIO = { contraparte: "", lado: "C", time: "", odd: "", volume: "", data: hoje() };
+const pct = (pnl, base) => (base ? sinal((pnl / base) * 100, (n) => `${odd(n)}%`) : "—");
 
 // Estado que sobrevive ao F5. Storage bloqueado ou corrompido cai no padrão.
 function useGuardado(chave, padrao) {
@@ -45,15 +48,16 @@ function copiar(texto) {
 
 const Lado = ({ l }) => <span className={`lado ${l} largo`}>{l === "C" ? "COMPRA [C]" : "VENDA [V]"}</span>;
 const Pnl = ({ v }) => <span className={`num ${v > 0 ? "variacao sobe" : v < 0 ? "variacao desce" : ""}`}>{sinal(v)}</span>;
-const I = { size: 13, strokeWidth: 1.5 };
+const I = { size: 16, strokeWidth: 1.5 };
 
 export default function App() {
   const [boletas, setBoletas] = useGuardado("book:boletas", MOCK);
   const [oddsHoje, setOddsHoje] = useGuardado("book:odds", ODDS_MOCK);
   const [status, setStatus] = useGuardado("book:status", {});
   const [tema, setTema] = useGuardado("book:tema", "dark");
-  const [modo, setModo] = useGuardado("book:modo", "Book");
+  const [aba, setAba] = useGuardado("book:aba", "Boletar");
   useEffect(() => { document.documentElement.dataset.theme = tema; }, [tema]);
+  useEffect(() => { window.scrollTo(0, 0); }, [aba]);
 
   const mtmDe = (b) => mtm(b, oddsHoje[b.time]);
   const m = useMemo(() => {
@@ -63,16 +67,64 @@ export default function App() {
     return { comprada, vendida, total: comprada + vendida, pnl };
   }, [boletas, oddsHoje]);
 
-  // ---------- boletagem ----------
-  const [msg, setMsg] = useState("");
-  const [form, setForm] = useState(VAZIO);
-  const [faltou, setFaltou] = useState([]);
   const [editando, setEditando] = useState(null);
+  const [form, setForm] = useState(VAZIO);
+  function editar(b) {
+    setEditando(b.id);
+    setForm({ ...b, odd: String(b.odd).replace(".", ","), volume: String(b.volume).replace(".", ",") });
+    setAba("Boletar");
+  }
+  function excluir(b) {
+    if (confirm(`Excluir a boleta #${b.id} (${b.contraparte} · ${b.time})? Não dá para desfazer.`))
+      setBoletas((bs) => bs.filter((x) => x.id !== b.id));
+  }
+  const contrapartes = [...new Set(boletas.map((b) => b.contraparte))].sort();
+
+  return (
+    <div className="app">
+      <header className="topo">
+        <div className="linha-topo">
+          <h1>Book Brasileirão</h1>
+          <button className="icone" aria-label={tema === "dark" ? "Tema claro" : "Tema escuro"}
+            onClick={() => setTema(tema === "dark" ? "light" : "dark")}>{tema === "dark" ? <Sun {...I} /> : <Moon {...I} />}</button>
+        </div>
+        <div className="pnl-topo"><span className="rotulo-chip">P&amp;L MTM</span><Pnl v={m.pnl} /><small>{pct(m.pnl, m.total)}</small></div>
+        <dl className="chips">
+          <div className="chip"><dt>Notional</dt><dd>{brl(m.total)}</dd></div>
+          <div className="chip"><dt>Comprada</dt><dd className="variacao sobe">{brl(m.comprada)}</dd></div>
+          <div className="chip"><dt>Vendida</dt><dd className="variacao desce">{brl(m.vendida)}</dd></div>
+          <div className="chip"><dt>Líquida</dt><dd>{sinal(m.comprada - m.vendida)}</dd></div>
+          <div className="chip"><dt>Boletas</dt><dd>{boletas.length}</dd></div>
+        </dl>
+      </header>
+
+      <main className="conteudo">
+        {aba === "Boletar" && <Boletar {...{ boletas, setBoletas, form, setForm, editando, setEditando, contrapartes }} irParaBook={() => setAba("Book")} />}
+        {aba === "Book" && <Book {...{ boletas, contrapartes, mtmDe, oddsHoje, editar, excluir }} />}
+        {aba === "MTM" && <Mtm {...{ boletas, oddsHoje, setOddsHoje }} total={m} />}
+        {aba === "Payoff" && <Payoff boletas={boletas} />}
+        {aba === "Batimento" && <Batimento {...{ boletas, mtmDe, status, setStatus }} />}
+      </main>
+
+      <nav className="abas">
+        {ABAS.map(([nome, Icone]) => (
+          <button key={nome} aria-current={aba === nome ? "page" : undefined} onClick={() => setAba(nome)}>
+            <Icone size={20} strokeWidth={1.5} /><span>{nome}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+function Boletar({ setBoletas, form, setForm, editando, setEditando, contrapartes, irParaBook }) {
+  const [msg, setMsg] = useState("");
+  const [faltou, setFaltou] = useState([]);
+  const [ok, setOk] = useState(null);
 
   function interpretarMsg() {
     const p = interpretar(msg);
-    setFaltou(Object.entries({ contraparte: "contraparte", lado: "lado", time: "time", odd: "odd", volume: "volume" })
-      .filter(([k]) => p[k] == null).map(([, n]) => n));
+    setFaltou(["contraparte", "lado", "time", "odd", "volume"].filter((k) => p[k] == null));
     setForm((f) => ({
       ...f,
       contraparte: p.contraparte ?? f.contraparte,
@@ -90,137 +142,100 @@ export default function App() {
     const b = { data: form.data, contraparte: form.contraparte.trim(), time: form.time, lado: form.lado, odd: valOdd, volume: valVol };
     if (editando != null) setBoletas((bs) => bs.map((x) => (x.id === editando ? { ...x, ...b } : x)));
     else setBoletas((bs) => [...bs, { id: Math.max(0, ...bs.map((x) => x.id)) + 1, ...b }]);
+    setOk(`${editando != null ? "Boleta alterada" : "Boleta registrada"}: ${b.lado === "C" ? "Compra" : "Venda"} ${b.time} · ${brl(b.volume)} @ ${odd(b.odd)} com ${b.contraparte}`);
     setForm({ ...VAZIO, data: form.data }); setMsg(""); setFaltou([]); setEditando(null);
   }
-  function editar(b) {
-    setEditando(b.id); setFaltou([]);
-    setForm({ ...b, odd: String(b.odd).replace(".", ","), volume: String(b.volume).replace(".", ",") });
-  }
-  function excluir(b) {
-    if (confirm(`Excluir a boleta #${b.id} (${b.contraparte} · ${b.time})? Não dá para desfazer.`))
-      setBoletas((bs) => bs.filter((x) => x.id !== b.id));
-  }
-  const contrapartes = [...new Set(boletas.map((b) => b.contraparte))].sort();
 
   return (
-    <div className="app">
-      <div className="faixa">
-        <div className="identidade"><span className="ticker">Book Brasileirão</span></div>
-        <dl className="chips">
-          <div className="chip"><dt>Notional total</dt><dd>{brl(m.total)}</dd></div>
-          <div className="chip"><dt>Exposição comprada</dt><dd className="variacao sobe">{brl(m.comprada)}</dd></div>
-          <div className="chip"><dt>Exposição vendida</dt><dd className="variacao desce">{brl(m.vendida)}</dd></div>
-          <div className="chip"><dt>Líquida</dt><dd>{sinal(m.comprada - m.vendida)}</dd></div>
-          <div className="chip"><dt>Boletas abertas</dt><dd>{boletas.length}</dd></div>
-          <div className="chip destaque"><dt>P&amp;L MTM</dt>
-            <dd><Pnl v={m.pnl} /> <small className="pct">{m.total ? sinal((m.pnl / m.total) * 100, (n) => `${odd(n)}%`) : "—"}</small></dd></div>
-        </dl>
-        <div className="cortes modo">
-          {MODOS.map((x) => <button key={x} aria-pressed={modo === x} onClick={() => setModo(x)}>{x}</button>)}
-        </div>
-        <button className="alternador" onClick={() => setTema(tema === "dark" ? "light" : "dark")}>{tema === "dark" ? "escuro" : "claro"}</button>
-      </div>
+    <section className="cartao boletagem">
+      <h2>{editando != null ? `Editando boleta #${editando}` : "Nova boleta"}</h2>
+      {ok && <p className="confirmacao"><Check size={14} strokeWidth={2} /> {ok} <button className="link" onClick={irParaBook}>ver no book</button></p>}
+      <label className="campo">Mensagem do WhatsApp
+        <textarea rows={3} value={msg} onChange={(e) => { setMsg(e.target.value); setOk(null); }}
+          placeholder="Fechado com Rodrigo: Compra 5k de Palmeiras @ 3.50" />
+      </label>
+      <button className="botao" onClick={interpretarMsg} disabled={!msg.trim()}><Wand2 {...I} /> Interpretar mensagem</button>
+      {faltou.length > 0 && <p className="aviso-parcial">Não achei: {faltou.join(", ")}. Preencha abaixo.</p>}
 
-      <div className="corpo">
-        <section className="painel">
-          <header><h2>Boletagem</h2>{editando != null && <span className="selo">editando #{editando}</span>}</header>
-          <div className="rolagem boletagem">
-            <label className="campo">Mensagem do WhatsApp
-              <textarea rows={4} value={msg} onChange={(e) => setMsg(e.target.value)}
-                placeholder="Fechado com Rodrigo: Compra 5k de Palmeiras @ 3.50" />
-            </label>
-            <button className="botao" onClick={interpretarMsg} disabled={!msg.trim()}><Wand2 {...I} /> interpretar</button>
-            {faltou.length > 0 && <p className="aviso-parcial">não achei: {faltou.join(", ")} — preencha abaixo</p>}
-
-            <div className="conferencia">
-              <label className="campo">Contraparte
-                <input list="contrapartes" value={form.contraparte} onChange={(e) => setForm({ ...form, contraparte: e.target.value })} />
-                <datalist id="contrapartes">{contrapartes.map((c) => <option key={c} value={c} />)}</datalist>
-              </label>
-              <div className="campo">Lado
-                <div className="cortes">
-                  {["C", "V"].map((l) => (
-                    <button key={l} aria-pressed={form.lado === l} className={`lado-${l}`} onClick={() => setForm({ ...form, lado: l })}>
-                      {l === "C" ? "Compra [C]" : "Venda [V]"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <label className="campo">Time
-                <select value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })}>
-                  <option value="">—</option>{TIMES.map((t) => <option key={t}>{t}</option>)}
-                </select>
-              </label>
-              <label className="campo">Odd
-                <input className="num" inputMode="decimal" value={form.odd} onChange={(e) => setForm({ ...form, odd: e.target.value })} />
-              </label>
-              <label className="campo">Volume (R$)
-                <input className="num" inputMode="decimal" value={form.volume} onChange={(e) => setForm({ ...form, volume: e.target.value })} />
-              </label>
-              <label className="campo">Data
-                <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
-              </label>
-            </div>
-            {valido && (
-              <p className="previa">
-                Campeão: <Pnl v={liquidacao({ lado: form.lado, odd: valOdd, volume: valVol, time: "x" }, "x")} />
-                {" · "}não campeão: <Pnl v={liquidacao({ lado: form.lado, odd: valOdd, volume: valVol, time: "x" }, "y")} />
-              </p>
-            )}
-            <div className="acoes">
-              <button className="botao primario" onClick={registrar} disabled={!valido}><Check {...I} /> {editando != null ? "salvar alterações" : "registrar boleta"}</button>
-              {editando != null && <button className="botao" onClick={() => { setEditando(null); setForm(VAZIO); }}>cancelar</button>}
-            </div>
+      <div className="conferencia">
+        <label className="campo inteiro">Contraparte
+          <input list="contrapartes" autoCapitalize="words" value={form.contraparte} onChange={(e) => setForm({ ...form, contraparte: e.target.value })} />
+          <datalist id="contrapartes">{contrapartes.map((c) => <option key={c} value={c} />)}</datalist>
+        </label>
+        <div className="campo inteiro">Lado
+          <div className="cortes">
+            {["C", "V"].map((l) => (
+              <button key={l} aria-pressed={form.lado === l} className={`lado-${l}`} onClick={() => setForm({ ...form, lado: l })}>
+                {l === "C" ? "Compra [C]" : "Venda [V]"}
+              </button>
+            ))}
           </div>
-        </section>
-
-        {modo === "Book" && <Book boletas={boletas} contrapartes={contrapartes} mtmDe={mtmDe} oddsHoje={oddsHoje} editar={editar} excluir={excluir} />}
-        {modo === "MTM" && <Mtm boletas={boletas} oddsHoje={oddsHoje} setOddsHoje={setOddsHoje} total={m} />}
-        {modo === "Payoff" && <Payoff boletas={boletas} />}
-        {modo === "Batimento" && <Batimento boletas={boletas} mtmDe={mtmDe} status={status} setStatus={setStatus} />}
+        </div>
+        <label className="campo inteiro">Time
+          <select value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })}>
+            <option value="">—</option>{TIMES.map((t) => <option key={t}>{t}</option>)}
+          </select>
+        </label>
+        <label className="campo">Odd
+          <input className="num" inputMode="decimal" value={form.odd} onChange={(e) => setForm({ ...form, odd: e.target.value })} />
+        </label>
+        <label className="campo">Volume (R$)
+          <input className="num" inputMode="decimal" value={form.volume} onChange={(e) => setForm({ ...form, volume: e.target.value })} />
+        </label>
+        <label className="campo inteiro">Data
+          <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
+        </label>
       </div>
-    </div>
+      {valido && (
+        <p className="previa">
+          Se o {form.time} for campeão: <Pnl v={liquidacao({ lado: form.lado, odd: valOdd, volume: valVol, time: "x" }, "x")} />
+          <br />Se não for: <Pnl v={liquidacao({ lado: form.lado, odd: valOdd, volume: valVol, time: "x" }, "y")} />
+        </p>
+      )}
+      <button className="botao primario grande" onClick={registrar} disabled={!valido}>
+        <Check {...I} /> {editando != null ? "Salvar alterações" : "Registrar boleta"}</button>
+      {editando != null && <button className="botao grande" onClick={() => { setEditando(null); setForm(VAZIO); }}>Cancelar edição</button>}
+    </section>
   );
 }
 
 function Book({ boletas, contrapartes, mtmDe, oddsHoje, editar, excluir }) {
-  const [f, setF] = useState({ time: "", contraparte: "", lado: "" });
+  const [f, setF] = useGuardado("book:filtros", { time: "", contraparte: "", lado: "" });
   const linhas = boletas
     .filter((b) => (!f.time || b.time === f.time) && (!f.contraparte || b.contraparte === f.contraparte) && (!f.lado || b.lado === f.lado))
     .sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
   const sel = (k, opcoes, rotulo) => (
-    <select className="filtro-gestora" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} aria-label={rotulo}>
+    <select className="filtro" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} aria-label={rotulo}>
       <option value="">{rotulo}</option>{opcoes.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
     </select>
   );
-  const vol = linhas.reduce((s, b) => s + b.volume, 0);
   return (
-    <section className="painel">
-      <header>
-        <h2>Book</h2>
-        {sel("time", [...new Set(boletas.map((b) => b.time))].sort().map((t) => [t, t]), "todos os times")}
-        {sel("contraparte", contrapartes.map((c) => [c, c]), "todas as contrapartes")}
-        {sel("lado", [["C", "Compra [C]"], ["V", "Venda [V]"]], "os dois lados")}
-        <span className="resumo">{linhas.length} de {boletas.length} · {brl(vol)}</span>
-      </header>
-      <div className="rolagem">
-        {linhas.length === 0 ? <div className="estado"><strong>Nenhuma boleta no filtro</strong>Limpe um dos filtros acima.</div> : (
-          <table className="pontas cab-centro">
-            <thead><tr><th>Data</th><th>ID</th><th className="texto">Contraparte</th><th className="texto">Time</th><th>Lado</th>
-              <th>Odd entrada</th><th>Notional</th><th>Odd hoje</th><th>MTM</th><th>Ações</th></tr></thead>
-            <tbody>{linhas.map((b) => (
-              <tr key={b.id}>
-                <td className="num">{data(b.data)}</td><td className="num fraco">#{b.id}</td>
-                <td className="texto cliente">{b.contraparte}</td><td className="texto">{b.time}</td>
-                <td className="centro"><Lado l={b.lado} /></td>
-                <td className="num">{odd(b.odd)}</td><td className="num">{brl(b.volume)}</td>
-                <td className="num fraco">{odd(oddsHoje[b.time])}</td><td><Pnl v={mtmDe(b)} /></td>
-                <td className="centro"><button className="icone" title="Editar" onClick={() => editar(b)}><Pencil {...I} /></button>
-                  <button className="icone perigo" title="Excluir" onClick={() => excluir(b)}><Trash2 {...I} /></button></td>
-              </tr>))}
-            </tbody>
-          </table>)}
+    <section>
+      <div className="filtros">
+        {sel("time", [...new Set(boletas.map((b) => b.time))].sort().map((t) => [t, t]), "Time")}
+        {sel("contraparte", contrapartes.map((c) => [c, c]), "Contraparte")}
+        {sel("lado", [["C", "Compra"], ["V", "Venda"]], "Lado")}
       </div>
+      <p className="resumo-lista">{linhas.length} de {boletas.length} boletas · {brl(linhas.reduce((s, b) => s + b.volume, 0))}</p>
+      {linhas.length === 0 ? <div className="estado"><strong>Nenhuma boleta no filtro</strong>Limpe um dos filtros acima.</div> : (
+        <ul className="lista">{linhas.map((b) => (
+          <li key={b.id} className="cartao item">
+            <div className="item-linha">
+              <strong>{b.time}</strong><Lado l={b.lado} /><span className="dir"><Pnl v={mtmDe(b)} /></span>
+            </div>
+            <div className="item-linha fraco">
+              <span>{b.contraparte} · #{b.id} · {data(b.data)}</span>
+            </div>
+            <div className="item-linha">
+              <span className="num">{brl(b.volume)} @ {odd(b.odd)}</span>
+              <span className="num fraco">hoje {odd(oddsHoje[b.time])}</span>
+              <span className="dir acoes-item">
+                <button className="icone" aria-label={`Editar boleta ${b.id}`} onClick={() => editar(b)}><Pencil {...I} /></button>
+                <button className="icone perigo" aria-label={`Excluir boleta ${b.id}`} onClick={() => excluir(b)}><Trash2 {...I} /></button>
+              </span>
+            </div>
+          </li>))}
+        </ul>)}
     </section>
   );
 }
@@ -236,27 +251,22 @@ function Mtm({ boletas, oddsHoje, setOddsHoje, total }) {
     };
   }).sort((a, b) => b.n - a.n || a.time.localeCompare(b.time));
   return (
-    <section className="painel">
-      <header><h2>Marcação a mercado</h2>
-        <span className="resumo">P&amp;L <Pnl v={total.pnl} /> · {total.total ? sinal((total.pnl / total.total) * 100, (n) => `${odd(n)}%`) : "—"} do notional</span></header>
-      <div className="rolagem">
-        <table className="pontas cab-centro">
-          <thead><tr><th className="texto">Time</th><th>Odd de mercado hoje</th><th>Prob. implícita</th><th>Comprado</th><th>Vendido</th><th>MTM</th></tr></thead>
-          <tbody>{linhas.map((l) => {
-            const o = oddsHoje[l.time];
-            return (
-              <tr key={l.time} className={l.n ? "" : "sem-posicao"}>
-                <td className="texto cliente">{l.time}{l.n > 0 && <span className="contagem">×{l.n}</span>}</td>
-                <td className="centro"><input className="num odd-hoje" inputMode="decimal" defaultValue={o == null ? "" : odd(o)}
-                  onBlur={(e) => { const n = numero(e.target.value); setOddsHoje({ ...oddsHoje, [l.time]: n > 1 ? n : undefined }); }}
-                  onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label={`Odd de ${l.time}`} /></td>
-                <td className="num fraco">{o > 1 ? `${odd(100 / o)}%` : "—"}</td>
-                <td className="num">{l.c ? brl(l.c) : "—"}</td><td className="num">{l.v ? brl(l.v) : "—"}</td>
-                <td><Pnl v={l.pnl} /></td>
-              </tr>);
-          })}</tbody>
-        </table>
-      </div>
+    <section>
+      <p className="resumo-lista">P&amp;L <Pnl v={total.pnl} /> · {pct(total.pnl, total.total)} do notional. Toque na odd para atualizar.</p>
+      <ul className="lista cartao lista-densa">{linhas.map((l) => {
+        const o = oddsHoje[l.time];
+        return (
+          <li key={l.time} className={`mtm-linha ${l.n ? "" : "sem-posicao"}`}>
+            <div>
+              <strong>{l.time}</strong>
+              <small>{l.n ? `C ${l.c ? brl(l.c) : "—"} · V ${l.v ? brl(l.v) : "—"}` : "sem posição"} · {o > 1 ? `${odd(100 / o)}%` : "—"}</small>
+            </div>
+            <input className="num odd-hoje" inputMode="decimal" defaultValue={o == null ? "" : odd(o)}
+              onBlur={(e) => { const n = numero(e.target.value); setOddsHoje({ ...oddsHoje, [l.time]: n > 1 ? n : undefined }); }}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label={`Odd de hoje do ${l.time}`} />
+            <span className="dir"><Pnl v={l.pnl} /></span>
+          </li>);
+      })}</ul>
     </section>
   );
 }
@@ -265,38 +275,30 @@ function Payoff({ boletas }) {
   const cenarios = useMemo(() => payoffs(boletas).sort((a, b) => b.pnl - a.pnl), [boletas]);
   const [campeao, setCampeao] = useState(cenarios[0]?.time ?? TIMES[0]);
   const max = Math.max(1, ...cenarios.map((c) => Math.abs(c.pnl)));
-  const pior = cenarios[cenarios.length - 1], melhor = cenarios[0];
   const total = cenarios.find((c) => c.time === campeao)?.pnl ?? 0;
   return (
-    <section className="painel payoff">
-      <header><h2>Payoff por campeão</h2>
-        <select className="filtro-gestora" value={campeao} onChange={(e) => setCampeao(e.target.value)} aria-label="Campeão">
+    <section>
+      <label className="campo">Campeão
+        <select value={campeao} onChange={(e) => setCampeao(e.target.value)}>
           {TIMES.map((t) => <option key={t}>{t}</option>)}</select>
-        <span className="resumo">melhor {melhor.time} <Pnl v={melhor.pnl} /> · pior {pior.time} <Pnl v={pior.pnl} /></span></header>
-      <div className="rolagem payoff-corpo">
-        <ul className="barras">{cenarios.map((c) => (
-          <li key={c.time} className={c.time === campeao ? "atual" : ""} onClick={() => setCampeao(c.time)}>
-            <span className="nome-barra">{c.time}</span>
-            <span className="trilho">
-              <span className="meio" />
-              <span className={`barra ${c.pnl >= 0 ? "pos" : "neg"}`}
-                style={{ width: `${(Math.abs(c.pnl) / max) * 50}%`, [c.pnl >= 0 ? "left" : "right"]: "50%" }} />
-            </span>
-            <Pnl v={c.pnl} />
-          </li>))}
-        </ul>
-        <div>
-          <p className="titulo-tabela">Se o <strong>{campeao}</strong> for campeão: <Pnl v={total} /></p>
-          <table className="pontas cab-centro">
-            <thead><tr><th>ID</th><th className="texto">Contraparte</th><th className="texto">Time</th><th>Lado</th><th>Odd</th><th>Notional</th><th>Resultado</th></tr></thead>
-            <tbody>{boletas.map((b) => (
-              <tr key={b.id}><td className="num fraco">#{b.id}</td><td className="texto cliente">{b.contraparte}</td><td className="texto">{b.time}</td>
-                <td className="centro"><Lado l={b.lado} /></td><td className="num">{odd(b.odd)}</td><td className="num">{brl(b.volume)}</td>
-                <td><Pnl v={liquidacao(b, campeao)} /></td></tr>))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </label>
+      <p className="destaque-payoff">Se o <strong>{campeao}</strong> for campeão: <Pnl v={total} /></p>
+      <ul className="barras cartao">{cenarios.map((c) => (
+        <li key={c.time} className={c.time === campeao ? "atual" : ""} onClick={() => setCampeao(c.time)}>
+          <span className="nome-barra">{c.time}</span>
+          <span className="trilho"><span className="meio" />
+            <span className={`barra ${c.pnl >= 0 ? "pos" : "neg"}`}
+              style={{ width: `${(Math.abs(c.pnl) / max) * 50}%`, [c.pnl >= 0 ? "left" : "right"]: "50%" }} /></span>
+          <Pnl v={c.pnl} />
+        </li>))}
+      </ul>
+      <h3 className="subtitulo">Boleta a boleta</h3>
+      <ul className="lista cartao lista-densa">{boletas.map((b) => (
+        <li key={b.id} className="item-linha">
+          <span><strong>{b.time}</strong> <Lado l={b.lado} /><br /><small className="fraco">{b.contraparte} · {brl(b.volume)} @ {odd(b.odd)}</small></span>
+          <span className="dir"><Pnl v={liquidacao(b, campeao)} /></span>
+        </li>))}
+      </ul>
     </section>
   );
 }
@@ -309,41 +311,31 @@ function Batimento({ boletas, mtmDe, status, setStatus }) {
   }, [boletas]);
   const [aberto, setAberto] = useState(null);
   const [copiado, setCopiado] = useState(null);
-  const texto = aberto && grupos.find(([n]) => n === aberto)
-    ? mensagemBatimento(aberto, grupos.find(([n]) => n === aberto)[1], mtmDe) : "";
   return (
-    <section className="painel">
-      <header><h2>Batimento mensal</h2>
-        <span className="resumo">{grupos.filter(([n]) => (status[n] ?? "Pendente") === "Batido").length} de {grupos.length} batidas</span></header>
-      <div className="rolagem">
-        <table className="pontas cab-centro">
-          <thead><tr><th className="texto">Contraparte</th><th>Boletas</th><th>Volume</th><th>Saldo a liquidar (MTM)</th><th>Status</th><th>Mensagem</th></tr></thead>
-          <tbody>{grupos.map(([nome, bs]) => {
-            const st = status[nome] ?? "Pendente";
-            return (
-              <tr key={nome} className={aberto === nome ? "atual" : ""}>
-                <td className="texto cliente">{nome}</td><td className="num">{bs.length}</td>
-                <td className="num">{brl(bs.reduce((s, b) => s + b.volume, 0))}</td>
-                <td><Pnl v={bs.reduce((s, b) => s + (mtmDe(b) ?? 0), 0)} /></td>
-                <td className="centro"><div className="cortes status">{STATUS.map((s) => (
-                  <button key={s} className={`st-${s}`} aria-pressed={st === s} onClick={() => setStatus({ ...status, [nome]: s })}>{s}</button>))}
-                </div></td>
-                <td className="centro"><button className="alternador" aria-pressed={aberto === nome}
-                  onClick={() => setAberto(aberto === nome ? null : nome)}>gerar mensagem</button></td>
-              </tr>);
-          })}</tbody>
-        </table>
-        {texto && (
-          <div className="mensagem">
-            <textarea readOnly rows={Math.min(16, texto.split("\n").length + 1)} value={texto} />
-            <div className="acoes">
-              <button className={`copiar ${copiado === aberto ? "copiado" : ""}`}
-                onClick={() => copiar(texto).then((ok) => { setCopiado(ok ? aberto : null); setTimeout(() => setCopiado(null), 1400); })}>
-                <Copy size={11} strokeWidth={1.5} /> {copiado === aberto ? "copiado" : "copiar texto"}</button>
-              <a className="botao primario" href={linkWhatsApp(texto)} target="_blank" rel="noopener noreferrer"><Send {...I} /> enviar via WhatsApp</a>
+    <section>
+      <p className="resumo-lista">{grupos.filter(([n]) => (status[n] ?? "Pendente") === "Batido").length} de {grupos.length} contrapartes batidas</p>
+      <ul className="lista">{grupos.map(([nome, bs]) => {
+        const st = status[nome] ?? "Pendente";
+        const texto = aberto === nome ? mensagemBatimento(nome, bs, mtmDe) : "";
+        return (
+          <li key={nome} className="cartao item">
+            <div className="item-linha"><strong>{nome}</strong><span className="dir"><Pnl v={bs.reduce((s, b) => s + (mtmDe(b) ?? 0), 0)} /></span></div>
+            <div className="item-linha fraco"><span>{bs.length} boleta{bs.length === 1 ? "" : "s"} · {brl(bs.reduce((s, b) => s + b.volume, 0))}</span><span className="dir">saldo (MTM)</span></div>
+            <div className="cortes status">{STATUS.map((s) => (
+              <button key={s} className={`st-${s}`} aria-pressed={st === s} onClick={() => setStatus({ ...status, [nome]: s })}>{s}</button>))}
             </div>
-          </div>)}
-      </div>
+            <button className="botao" aria-expanded={aberto === nome} onClick={() => setAberto(aberto === nome ? null : nome)}>
+              {aberto === nome ? "Fechar mensagem" : "Gerar mensagem de batimento"}</button>
+            {texto && (
+              <div className="mensagem">
+                <textarea readOnly rows={Math.min(14, texto.split("\n").length + 1)} value={texto} />
+                <a className="botao primario grande" href={linkWhatsApp(texto)} target="_blank" rel="noopener noreferrer"><Send {...I} /> Enviar via WhatsApp</a>
+                <button className={`botao ${copiado === nome ? "copiado" : ""}`}
+                  onClick={() => copiar(texto).then((ok) => { setCopiado(ok ? nome : null); setTimeout(() => setCopiado(null), 1400); })}>
+                  {copiado === nome ? <><Check {...I} /> Copiado</> : <><Copy {...I} /> Copiar texto</>}</button>
+              </div>)}
+          </li>);
+      })}</ul>
     </section>
   );
 }

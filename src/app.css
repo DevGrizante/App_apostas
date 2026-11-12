@@ -1,0 +1,124 @@
+/* Book do Brasileirão, mobile.
+   Celular primeiro: uma coluna, abas embaixo, alvo de toque >= 44px e campo em 16px
+   (abaixo disso o iOS dá zoom ao focar). A densidade da Mesa fica nos números, não no toque. */
+html, body { height: auto; min-height: 100%; }
+body { font-size: 14px; overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
+.app { max-width: 560px; margin: 0 auto; min-height: 100dvh; padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+
+.topo {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--painel); border-bottom: 1px solid var(--borda);
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  display: grid; gap: 6px;
+}
+.linha-topo { display: flex; align-items: center; justify-content: space-between; }
+.topo h1 { margin: 0; font-size: 17px; font-weight: 680; letter-spacing: -0.015em; }
+.pnl-topo { display: flex; align-items: baseline; gap: 8px; }
+.pnl-topo .num { font-size: 21px; font-weight: 680; }
+.pnl-topo small { font-family: var(--font-mono); font-size: 12px; color: var(--texto-2); }
+.rotulo-chip { font-size: 9.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-3); }
+.topo .chips { flex-wrap: nowrap; overflow-x: auto; gap: 16px; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+.topo .chips::-webkit-scrollbar { display: none; }
+.topo .chip { text-align: left; }
+
+.conteudo { padding: 12px 16px; display: grid; gap: 12px; }
+.conteudo > section { display: grid; gap: 12px; align-content: start; }
+.cartao { background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); box-shadow: var(--sombra); }
+.cartao h2, .subtitulo { margin: 0; font-size: 11px; font-weight: 650; letter-spacing: 0.07em; text-transform: uppercase; color: var(--texto-2); }
+.subtitulo { margin-top: 4px; }
+.boletagem { padding: 14px; display: grid; gap: 12px; }
+
+.campo { display: grid; gap: 6px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-3); }
+.campo input, .campo select, .campo textarea, .mensagem textarea, .odd-hoje, .filtro {
+  font: 400 16px/1.35 var(--font-sans); text-transform: none; letter-spacing: 0;
+  color: var(--texto); background: var(--fundo);
+  border: 1px solid var(--borda-forte); border-radius: var(--raio-controle);
+  padding: 10px 12px; min-height: 44px; outline: none; width: 100%;
+}
+.campo input.num, .odd-hoje { font-family: var(--font-mono); text-align: right; }
+.campo textarea, .mensagem textarea { font-family: var(--font-mono); font-size: 14px; resize: vertical; }
+.campo input:focus, .campo select:focus, .campo textarea:focus, .odd-hoje:focus, .filtro:focus { border-color: var(--acento); box-shadow: 0 0 0 3px var(--acento-fraco); }
+.conferencia { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.conferencia .inteiro { grid-column: 1 / -1; }
+.cortes button { min-height: 40px; }
+.conferencia .cortes button { flex: 1; text-align: center; font-size: 13px; }
+.cortes button.lado-C[aria-pressed="true"] { color: var(--compra); background: var(--compra-fundo); }
+.cortes button.lado-V[aria-pressed="true"] { color: var(--venda); background: var(--venda-fundo); }
+.previa { margin: 0; font-size: 13px; color: var(--texto-2); line-height: 1.7; }
+.boletagem .aviso-parcial { margin: 0; white-space: normal; font-size: 13px; padding: 8px 10px; }
+.confirmacao { margin: 0; padding: 8px 10px; border-radius: var(--raio-botao); background: var(--compra-fundo); color: var(--compra); font-size: 13px; }
+.link { border: 0; background: none; padding: 0; color: var(--acento); font: inherit; text-decoration: underline; cursor: pointer; }
+
+.botao {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 10px 14px; border: 1px solid var(--borda-forte); border-radius: var(--raio-controle);
+  background: var(--painel); color: var(--texto); font: 600 14px/1.2 var(--font-sans);
+  cursor: pointer; text-decoration: none; width: 100%;
+}
+.botao.grande { min-height: 48px; font-size: 15px; }
+.botao.primario { background: var(--acento); border-color: var(--acento); color: var(--painel); }
+.botao.copiado { color: var(--compra); border-color: var(--compra); }
+.botao:disabled { opacity: 0.45; cursor: default; }
+.botao:focus-visible, .icone:focus-visible, .abas button:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
+.icone {
+  border: 0; background: none; color: var(--texto-2); border-radius: var(--raio-botao); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px;
+}
+.icone:active { color: var(--acento); background: var(--acento-fraco); }
+.icone.perigo:active { color: var(--venda); background: var(--venda-fundo); }
+
+.filtros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.filtro { font-size: 14px; padding: 8px; }
+.resumo-lista { margin: 0; font-size: 12px; color: var(--texto-2); }
+.lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.item { padding: 10px 12px; display: grid; gap: 4px; }
+.item-linha { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.item-linha strong { font-weight: 640; font-size: 15px; }
+.item .cortes.status { margin-top: 6px; }
+.fraco { color: var(--texto-2); font-size: 12.5px; }
+.dir { margin-left: auto; text-align: right; }
+.acoes-item { display: flex; margin-right: -10px; }
+.lado.largo { width: auto; white-space: nowrap; padding: 1px 6px; font-size: 10.5px; letter-spacing: 0.02em; }
+.num { font-size: 13px; text-align: inherit; }
+
+.lista-densa { gap: 0; }
+.lista-densa > li { padding: 10px 12px; border-bottom: 1px solid var(--borda); }
+.lista-densa > li:last-child { border-bottom: 0; }
+.mtm-linha { display: grid; grid-template-columns: 1fr 84px 96px; align-items: center; gap: 8px; }
+.mtm-linha strong { display: block; font-size: 14px; font-weight: 600; }
+.mtm-linha small { font-size: 11.5px; color: var(--texto-2); }
+.mtm-linha.sem-posicao strong, .mtm-linha.sem-posicao small { color: var(--texto-3); }
+.odd-hoje { font-size: 16px; padding: 6px 8px; min-height: 40px; }
+
+.cortes.status { display: flex; }
+.cortes.status button { flex: 1; text-align: center; font-size: 13px; }
+.cortes.status .st-Batido[aria-pressed="true"] { color: var(--compra); background: var(--compra-fundo); }
+.cortes.status .st-Descasado[aria-pressed="true"] { color: var(--venda); background: var(--venda-fundo); }
+.mensagem { display: grid; gap: 8px; margin-top: 4px; }
+
+.destaque-payoff { margin: 0; font-size: 15px; }
+.destaque-payoff .num { font-size: 17px; font-weight: 680; }
+.barras { list-style: none; margin: 0; padding: 6px; display: grid; }
+.barras li { display: grid; grid-template-columns: 92px 1fr 96px; align-items: center; gap: 8px; min-height: 32px; padding: 0 6px; border-radius: var(--raio-botao); cursor: pointer; font-size: 12.5px; }
+.barras li .num { font-size: 12px; text-align: right; }
+.barras li.atual { background: var(--acento-fraco); }
+.barras li.atual .nome-barra { color: var(--acento); font-weight: 640; }
+.nome-barra { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trilho { position: relative; height: 12px; }
+.trilho .meio { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--borda-forte); }
+.barra { position: absolute; top: 0; bottom: 0; border-radius: var(--raio-selo); }
+.barra.pos { background: var(--compra); }
+.barra.neg { background: var(--venda); }
+
+.abas {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  background: var(--painel); border-top: 1px solid var(--borda);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.abas button {
+  display: grid; justify-items: center; gap: 2px; padding: 8px 0 6px; min-height: 56px;
+  border: 0; background: none; color: var(--texto-2); font: 600 10.5px/1 var(--font-sans); cursor: pointer;
+}
+.abas button[aria-current="page"] { color: var(--acento); }
+@media (min-width: 561px) { .abas { max-width: 560px; margin: 0 auto; border-left: 1px solid var(--borda); border-right: 1px solid var(--borda); } }
