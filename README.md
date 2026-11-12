@@ -9,11 +9,14 @@ npm run check    # trava parser, payoff, MTM e o link do WhatsApp
 ```
 
 ## Convenções
-- Lado é sempre a **nossa** ponta. Compra [C]: campeão paga `V × (odd − 1)`, senão perde `V`. Venda [V]: o oposto.
-- MTM = `V × (odd_entrada / odd_hoje − 1)` na compra, sinal trocado na venda: valor esperado pela probabilidade implícita `1 / odd_hoje`, sem margem.
+- Operação por **lote**, preço de **0 a 100**. No fim do campeonato o campeão paga 100 e os demais pagam 0.
+- Lado é sempre a **nossa** ponta. Compra [C] de Q lotes a P: campeão `+Q × (100 − P)`, senão `−Q × P`. Venda [V]: o oposto.
+- Notional = Q × P em R$ (o que sai de caixa na compra). Tomei 200 a 85 = R$ 17.000.
+- MTM = Q × (P_hoje − P_entrada), com sinal trocado na venda. Com P_hoje = 100 vira o próprio payoff de liquidação.
+- O preço de hoje também é a chance implícita do time (85 = 85%).
 - "Saldo a liquidar" no batimento é o MTM de hoje da contraparte: nada liquida antes do fim do campeonato.
 - Os 20 times de `src/logica.js → TIMES` são a Série A de 2025. Troque a lista quando a temporada mudar.
-- Boletas, odds, status e tema ficam no `localStorage` do navegador: não há servidor nem cópia em outro lugar.
+- Boletas, preços, status e tema ficam no `localStorage` do navegador: não há servidor nem cópia em outro lugar. As chaves são `book:v2:*`; o modelo antigo de volume e odd não é lido.
 
 ## No celular
 Publicado em https://devgrizante.github.io/App_apostas/ a cada push na `main` (`.github/workflows/pages.yml`). No celular, abra o link e use "Adicionar a tela inicial". As boletas ficam so no aparelho.

@@ -1,7 +1,10 @@
-// Regras do book: parser de mensagem, payoff de liquidação e marcação a mercado.
-// Convenção (lado da NOSSA ponta):
-//   Compra (C) — apostamos no time. Campeão: +V × (odd − 1). Não campeão: −V.
-//   Venda  (V) — bancamos o time.   Campeão: −V × (odd − 1). Não campeão: +V.
+// Regras do book: parser, liquidação e marcação a mercado.
+// Contrato por lote, preço de 0 a 100. No fim do campeonato o campeão paga 100; os demais pagam 0.
+//   Compra [C] de Q lotes a P: campeão +Q × (100 − P); demais −Q × P.
+//   Venda  [V] de Q lotes a P: o oposto.
+// Notional = Q × P, em R$ (é o que sai de caixa na compra).
+
+export const PAGA = 100;
 
 export const TIMES = [
   "Atlético-MG", "Bahia", "Botafogo", "Bragantino", "Ceará", "Corinthians",
@@ -37,13 +40,16 @@ export function numero(txt) {
   return Number.isFinite(n) ? n : null;
 }
 
+const PRECO_RE = /(?:@|\ba\b|\bpor\b|\bpre[çc]o\b|\bpx\b)\s*(\d+(?:[.,]\d+)?)/i;
+const LOTES_RE = /(\d+(?:[.,]\d+)?)\s*(k|mil)?\b/i;
+
 /** Extrai os campos de uma mensagem informal. Campo não achado volta null, nunca chutado. */
 export function interpretar(msg) {
   const txt = ` ${msg} `;
   const base = sem(txt);
-  const out = { contraparte: null, lado: null, time: null, odd: null, volume: null };
+  const out = { contraparte: null, lado: null, time: null, lotes: null, preco: null };
 
-  if (/\b(compr\w*|back)\b/.test(base)) out.lado = "C";
+  if (/\b(compr\w*|tom\w*|back)\b/.test(base)) out.lado = "C";
   else if (/\b(vend\w*|lay|banc\w*)\b/.test(base)) out.lado = "V";
 
   const cp = txt.match(/(?:\bcom|\bc\/|\bcontra)\s+([A-ZÀ-Ýa-zà-ý][\wÀ-ÿ]*)/i);
@@ -55,27 +61,25 @@ export function interpretar(msg) {
   }
 
   let resto = txt;
-  const od = txt.match(/(?:@|\bodds?\b|\bcota(?:ç|c)?(?:ão|ao)?\b|\ba\s+odd\b)\s*:?\s*(\d+(?:[.,]\d+)?)/i);
-  if (od) {
-    out.odd = numero(od[1].replace(",", "."));
-    resto = txt.replace(od[0], " ");
-  }
+  const pr = txt.match(PRECO_RE);
+  if (pr) { out.preco = numero(pr[1]); resto = txt.replace(pr[0], " "); }
 
-  const vol = resto.match(/(?:r\$\s*)?(\d+(?:[.,]\d+)*)\s*(k|mil|mm|m)\b/i) || resto.match(/r\$\s*(\d+(?:[.,]\d+)*)/i)
-    || resto.match(/\b(\d+(?:[.,]\d+)*)\b/);
-  if (vol) {
-    const n = numero(vol[1]);
-    const mult = { k: 1e3, mil: 1e3, m: 1e6, mm: 1e6 }[(vol[2] || "").toLowerCase()] || 1;
-    out.volume = n == null ? null : Math.round(n * mult * 100) / 100;
+  const lt = resto.match(LOTES_RE);
+  if (lt) {
+    const n = numero(lt[1]);
+    out.lotes = n == null ? null : Math.round(n * (lt[2] ? 1000 : 1) * 100) / 100;
   }
+  if (out.preco != null && (out.preco < 0 || out.preco > PAGA)) out.preco = null;
   return out;
 }
 
+/** Notional em R$: quanto sai de caixa para montar a posição a esse preço. */
+export const notional = (b) => b.lotes * b.preco;
+
 /** Resultado da boleta se `campeao` levar o título. */
 export function liquidacao(b, campeao) {
-  const ganha = b.time === campeao;
-  if (b.lado === "C") return ganha ? b.volume * (b.odd - 1) : -b.volume;
-  return ganha ? -b.volume * (b.odd - 1) : b.volume;
+  const por = b.time === campeao ? PAGA - b.preco : -b.preco;
+  return (b.lado === "C" ? 1 : -1) * b.lotes * por;
 }
 
 /** Payoff da carteira inteira para cada possível campeão. */
@@ -84,19 +88,19 @@ export function payoffs(boletas, times = TIMES) {
 }
 
 /**
- * MTM: valor esperado da boleta com a probabilidade implícita da odd de hoje (1 / odd).
- * Compra: V × (odd_entrada / odd_hoje − 1). Venda: o oposto.
- * É também o valor de zerar a posição (green-up) a odd_hoje, sem margem.
+ * MTM: ganho ou perda se a posição for zerada ao preço de hoje.
+ * Compra: Q × (P_hoje − P_entrada). Venda: o oposto. Preço de hoje 100 = campeão confirmado,
+ * então o MTM vira o próprio payoff de liquidação.
  */
-export function mtm(b, oddHoje) {
-  if (!(oddHoje > 1)) return null;
-  const v = b.volume * (b.odd / oddHoje - 1);
-  return b.lado === "C" ? v : -v;
+export function mtm(b, precoHoje) {
+  if (precoHoje == null) return null;
+  return (b.lado === "C" ? 1 : -1) * b.lotes * (precoHoje - b.preco);
 }
 
 export const brl = (n) =>
   n == null ? "—" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-export const odd = (n) => (n == null ? "—" : n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+export const fmtPreco = (n) => (n == null ? "—" : n.toLocaleString("pt-BR", { maximumFractionDigits: 2 }));
+export const fmtQtd = (n) => (n == null ? "—" : n.toLocaleString("pt-BR", { maximumFractionDigits: 2 }));
 export const sinal = (n, f = brl) => (n == null ? "—" : (n > 0 ? "+" : n < 0 ? "−" : "") + f(Math.abs(n)));
 export const data = (iso) => (iso ? iso.split("-").reverse().join("/") : "—");
 
@@ -104,16 +108,17 @@ export const data = (iso) => (iso ? iso.split("-").reverse().join("/") : "—");
 export function mensagemBatimento(nome, boletas, mtmDe, ref = new Date()) {
   const mes = ref.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const linhas = boletas.map(
-    (b) => `#${b.id} · ${data(b.data)} · ${b.lado === "C" ? "Compro" : "Vendo"} ${b.time} · ${brl(b.volume)} @ ${odd(b.odd)}`,
+    (b) => `#${b.id} · ${data(b.data)} · ${b.lado === "C" ? "Compro" : "Vendo"} ${fmtQtd(b.lotes)} lotes ${b.time} a ${fmtPreco(b.preco)} · ${brl(notional(b))}`,
   );
-  const vol = boletas.reduce((s, b) => s + b.volume, 0);
+  const comprado = boletas.filter((b) => b.lado === "C").reduce((s, b) => s + b.lotes, 0);
+  const vendido = boletas.filter((b) => b.lado === "V").reduce((s, b) => s + b.lotes, 0);
   const marc = boletas.reduce((s, b) => s + (mtmDe(b) ?? 0), 0);
   return [
     `Fala ${nome}, segue o batimento das nossas boletas do Brasileirão (Ref: ${mes}):`,
     "",
     ...linhas,
     "",
-    `Total: ${boletas.length} boleta${boletas.length === 1 ? "" : "s"} · ${brl(vol)} de notional`,
+    `Total: ${boletas.length} boleta${boletas.length === 1 ? "" : "s"} · comprado ${fmtQtd(comprado)} lotes · vendido ${fmtQtd(vendido)} lotes`,
     `Marcação a mercado hoje (meu lado): ${sinal(marc)}`,
     "",
     "Confere e me avisa se bateu. Abraço!",

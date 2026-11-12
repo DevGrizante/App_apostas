@@ -1,33 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, BookOpen, Check, Copy, Gauge, MessageSquarePlus, Moon, Pencil, Send, Sun, Trash2, Users, Wand2 } from "lucide-react";
 import {
-  TIMES, interpretar, numero, liquidacao, payoffs, mtm, mensagemBatimento, linkWhatsApp,
-  brl, odd, sinal, data,
+  PAGA, TIMES, brl, data, fmtPreco, fmtQtd, interpretar, liquidacao, linkWhatsApp, mensagemBatimento,
+  mtm, notional, numero, payoffs, sinal,
 } from "./logica.js";
 
 const MOCK = [
-  { id: 1, data: "2026-10-02", contraparte: "Rodrigo", time: "Palmeiras", lado: "C", odd: 3.5, volume: 5000 },
-  { id: 2, data: "2026-10-05", contraparte: "Marcelo", time: "Flamengo", lado: "V", odd: 2.8, volume: 2000 },
-  { id: 3, data: "2026-10-11", contraparte: "Bia", time: "Botafogo", lado: "C", odd: 6.0, volume: 1500 },
-  { id: 4, data: "2026-10-18", contraparte: "Rodrigo", time: "Flamengo", lado: "C", odd: 2.6, volume: 3000 },
-  { id: 5, data: "2026-10-23", contraparte: "Léo", time: "Atlético-MG", lado: "V", odd: 9.0, volume: 1000 },
-  { id: 6, data: "2026-10-30", contraparte: "Marcelo", time: "Palmeiras", lado: "V", odd: 3.2, volume: 2500 },
-  { id: 7, data: "2026-11-04", contraparte: "Bia", time: "Cruzeiro", lado: "C", odd: 11.0, volume: 800 },
-  { id: 8, data: "2026-11-09", contraparte: "Léo", time: "Botafogo", lado: "V", odd: 5.5, volume: 1200 },
+  { id: 1, data: "2026-10-02", contraparte: "Rodrigo", time: "Palmeiras", lado: "C", lotes: 100, preco: 25 },
+  { id: 2, data: "2026-10-05", contraparte: "Marcelo", time: "Flamengo", lado: "V", lotes: 50, preco: 20 },
+  { id: 3, data: "2026-10-11", contraparte: "Bia", time: "Botafogo", lado: "C", lotes: 40, preco: 10 },
+  { id: 4, data: "2026-10-18", contraparte: "Rodrigo", time: "Flamengo", lado: "C", lotes: 80, preco: 22 },
+  { id: 5, data: "2026-10-23", contraparte: "Léo", time: "Atlético-MG", lado: "V", lotes: 60, preco: 6 },
+  { id: 6, data: "2026-10-30", contraparte: "Marcelo", time: "Palmeiras", lado: "V", lotes: 70, preco: 27 },
+  { id: 7, data: "2026-11-04", contraparte: "Bia", time: "Cruzeiro", lado: "C", lotes: 30, preco: 4 },
+  { id: 8, data: "2026-11-09", contraparte: "Léo", time: "Botafogo", lado: "V", lotes: 50, preco: 9 },
 ];
-const ODDS_MOCK = {
-  Palmeiras: 3.0, Flamengo: 2.5, Botafogo: 5.0, "Atlético-MG": 10.0, Cruzeiro: 9.0, Fortaleza: 14.0,
-  "São Paulo": 18.0, Internacional: 20.0, Bahia: 25.0, Fluminense: 30.0, Corinthians: 35.0, Grêmio: 40.0,
-  Vasco: 60.0, Bragantino: 80.0, Santos: 80.0, Mirassol: 100.0, Ceará: 150.0, Vitória: 200.0,
-  Juventude: 250.0, Sport: 300.0,
+// Preço de hoje, 0–100: vale também como probabilidade implícita do time.
+const PRECO_MOCK = {
+  Palmeiras: 30, Flamengo: 28, Botafogo: 12, "Atlético-MG": 7, Cruzeiro: 5, Fortaleza: 3,
+  "São Paulo": 3, Internacional: 2, Bahia: 2, Fluminense: 2, Corinthians: 2, Grêmio: 1,
+  Vasco: 1, Bragantino: 1, Santos: 1, Mirassol: 1, Ceará: 0.5, Vitória: 0.5, Juventude: 0.5, Sport: 0.5,
 };
 const ABAS = [
   ["Boletar", MessageSquarePlus], ["Book", BookOpen], ["MTM", Gauge], ["Payoff", BarChart3], ["Batimento", Users],
 ];
 const STATUS = ["Pendente", "Batido", "Descasado"];
 const hoje = () => new Date().toISOString().slice(0, 10);
-const VAZIO = { contraparte: "", lado: "C", time: "", odd: "", volume: "", data: hoje() };
-const pct = (pnl, base) => (base ? sinal((pnl / base) * 100, (n) => `${odd(n)}%`) : "—");
+const VAZIO = { contraparte: "", lado: "C", time: "", lotes: "", preco: "", data: hoje() };
+const pct = (pnl, base) => (base ? sinal((pnl / base) * 100, (n) => `${fmtPreco(n)}%`) : "—");
+const precoValido = (n) => n != null && n >= 0 && n <= PAGA;
 
 // Estado que sobrevive ao F5. Storage bloqueado ou corrompido cai no padrão.
 function useGuardado(chave, padrao) {
@@ -51,27 +52,29 @@ const Pnl = ({ v }) => <span className={`num ${v > 0 ? "variacao sobe" : v < 0 ?
 const I = { size: 16, strokeWidth: 1.5 };
 
 export default function App() {
-  const [boletas, setBoletas] = useGuardado("book:boletas", MOCK);
-  const [oddsHoje, setOddsHoje] = useGuardado("book:odds", ODDS_MOCK);
+  // Chaves v2: o modelo antigo (volume e odd) não é lido de propósito.
+  const [boletas, setBoletas] = useGuardado("book:v2:boletas", MOCK);
+  const [precos, setPrecos] = useGuardado("book:v2:precos", PRECO_MOCK);
   const [status, setStatus] = useGuardado("book:status", {});
   const [tema, setTema] = useGuardado("book:tema", "dark");
   const [aba, setAba] = useGuardado("book:aba", "Boletar");
   useEffect(() => { document.documentElement.dataset.theme = tema; }, [tema]);
   useEffect(() => { window.scrollTo(0, 0); }, [aba]);
 
-  const mtmDe = (b) => mtm(b, oddsHoje[b.time]);
+  const mtmDe = (b) => mtm(b, precos[b.time]);
   const m = useMemo(() => {
-    const comprada = boletas.filter((b) => b.lado === "C").reduce((s, b) => s + b.volume, 0);
-    const vendida = boletas.filter((b) => b.lado === "V").reduce((s, b) => s + b.volume, 0);
-    const pnl = boletas.reduce((s, b) => s + (mtm(b, oddsHoje[b.time]) ?? 0), 0);
-    return { comprada, vendida, total: comprada + vendida, pnl };
-  }, [boletas, oddsHoje]);
+    const comprado = boletas.filter((b) => b.lado === "C").reduce((s, b) => s + b.lotes, 0);
+    const vendido = boletas.filter((b) => b.lado === "V").reduce((s, b) => s + b.lotes, 0);
+    const nocional = boletas.reduce((s, b) => s + notional(b), 0);
+    const pnl = boletas.reduce((s, b) => s + (mtmDe(b) ?? 0), 0);
+    return { comprado, vendido, liquido: comprado - vendido, nocional, pnl };
+  }, [boletas, precos]);
 
   const [editando, setEditando] = useState(null);
   const [form, setForm] = useState(VAZIO);
   function editar(b) {
     setEditando(b.id);
-    setForm({ ...b, odd: String(b.odd).replace(".", ","), volume: String(b.volume).replace(".", ",") });
+    setForm({ ...b, lotes: String(b.lotes).replace(".", ","), preco: String(b.preco).replace(".", ",") });
     setAba("Boletar");
   }
   function excluir(b) {
@@ -88,20 +91,20 @@ export default function App() {
           <button className="icone" aria-label={tema === "dark" ? "Tema claro" : "Tema escuro"}
             onClick={() => setTema(tema === "dark" ? "light" : "dark")}>{tema === "dark" ? <Sun {...I} /> : <Moon {...I} />}</button>
         </div>
-        <div className="pnl-topo"><span className="rotulo-chip">P&amp;L MTM</span><Pnl v={m.pnl} /><small>{pct(m.pnl, m.total)}</small></div>
+        <div className="pnl-topo"><span className="rotulo-chip">P&amp;L MTM</span><Pnl v={m.pnl} /><small>{pct(m.pnl, m.nocional)}</small></div>
         <dl className="chips">
-          <div className="chip"><dt>Notional</dt><dd>{brl(m.total)}</dd></div>
-          <div className="chip"><dt>Comprada</dt><dd className="variacao sobe">{brl(m.comprada)}</dd></div>
-          <div className="chip"><dt>Vendida</dt><dd className="variacao desce">{brl(m.vendida)}</dd></div>
-          <div className="chip"><dt>Líquida</dt><dd>{sinal(m.comprada - m.vendida)}</dd></div>
+          <div className="chip"><dt>Notional</dt><dd>{brl(m.nocional)}</dd></div>
+          <div className="chip"><dt>Comprado</dt><dd className="variacao sobe">{fmtQtd(m.comprado)} lotes</dd></div>
+          <div className="chip"><dt>Vendido</dt><dd className="variacao desce">{fmtQtd(m.vendido)} lotes</dd></div>
+          <div className="chip"><dt>Líquido</dt><dd>{sinal(m.liquido, fmtQtd)} lotes</dd></div>
           <div className="chip"><dt>Boletas</dt><dd>{boletas.length}</dd></div>
         </dl>
       </header>
 
       <main className="conteudo">
-        {aba === "Boletar" && <Boletar {...{ boletas, setBoletas, form, setForm, editando, setEditando, contrapartes }} irParaBook={() => setAba("Book")} />}
-        {aba === "Book" && <Book {...{ boletas, contrapartes, mtmDe, oddsHoje, editar, excluir }} />}
-        {aba === "MTM" && <Mtm {...{ boletas, oddsHoje, setOddsHoje }} total={m} />}
+        {aba === "Boletar" && <Boletar {...{ setBoletas, form, setForm, editando, setEditando, contrapartes }} irParaBook={() => setAba("Book")} />}
+        {aba === "Book" && <Book {...{ boletas, contrapartes, mtmDe, precos, editar, excluir }} />}
+        {aba === "MTM" && <Mtm {...{ boletas, precos, setPrecos }} total={m} />}
         {aba === "Payoff" && <Payoff boletas={boletas} />}
         {aba === "Batimento" && <Batimento {...{ boletas, mtmDe, status, setStatus }} />}
       </main>
@@ -124,25 +127,27 @@ function Boletar({ setBoletas, form, setForm, editando, setEditando, contraparte
 
   function interpretarMsg() {
     const p = interpretar(msg);
-    setFaltou(["contraparte", "lado", "time", "odd", "volume"].filter((k) => p[k] == null));
+    setFaltou(["contraparte", "lado", "time", "lotes", "preco"].filter((k) => p[k] == null));
     setForm((f) => ({
       ...f,
       contraparte: p.contraparte ?? f.contraparte,
       lado: p.lado ?? f.lado,
       time: p.time ?? f.time,
-      odd: p.odd != null ? String(p.odd).replace(".", ",") : f.odd,
-      volume: p.volume != null ? String(p.volume).replace(".", ",") : f.volume,
+      lotes: p.lotes != null ? String(p.lotes).replace(".", ",") : f.lotes,
+      preco: p.preco != null ? String(p.preco).replace(".", ",") : f.preco,
     }));
   }
-  const valOdd = numero(form.odd), valVol = numero(form.volume);
-  const valido = form.contraparte.trim() && TIMES.includes(form.time) && valOdd > 1 && valVol > 0 && form.data;
+  const valLotes = numero(form.lotes), valPreco = numero(form.preco);
+  const valido = form.contraparte.trim() && TIMES.includes(form.time)
+    && valLotes != null && valLotes > 0 && precoValido(valPreco) && form.data;
+  const sim = valido ? { lado: form.lado, time: form.time, lotes: valLotes, preco: valPreco } : null;
 
   function registrar() {
     if (!valido) return;
-    const b = { data: form.data, contraparte: form.contraparte.trim(), time: form.time, lado: form.lado, odd: valOdd, volume: valVol };
+    const b = { data: form.data, contraparte: form.contraparte.trim(), time: form.time, lado: form.lado, lotes: valLotes, preco: valPreco };
     if (editando != null) setBoletas((bs) => bs.map((x) => (x.id === editando ? { ...x, ...b } : x)));
     else setBoletas((bs) => [...bs, { id: Math.max(0, ...bs.map((x) => x.id)) + 1, ...b }]);
-    setOk(`${editando != null ? "Boleta alterada" : "Boleta registrada"}: ${b.lado === "C" ? "Compra" : "Venda"} ${b.time} · ${brl(b.volume)} @ ${odd(b.odd)} com ${b.contraparte}`);
+    setOk(`${editando != null ? "Boleta alterada" : "Boleta registrada"}: ${b.lado === "C" ? "Compra" : "Venda"} ${fmtQtd(b.lotes)} lotes ${b.time} a ${fmtPreco(b.preco)} com ${b.contraparte}`);
     setForm({ ...VAZIO, data: form.data }); setMsg(""); setFaltou([]); setEditando(null);
   }
 
@@ -152,7 +157,7 @@ function Boletar({ setBoletas, form, setForm, editando, setEditando, contraparte
       {ok && <p className="confirmacao"><Check size={14} strokeWidth={2} /> {ok} <button className="link" onClick={irParaBook}>ver no book</button></p>}
       <label className="campo">Mensagem do WhatsApp
         <textarea rows={3} value={msg} onChange={(e) => { setMsg(e.target.value); setOk(null); }}
-          placeholder="Fechado com Rodrigo: Compra 5k de Palmeiras @ 3.50" />
+          placeholder="Tomei 200 lotes de Flamengo a 85 com Rodrigo" />
       </label>
       <button className="botao" onClick={interpretarMsg} disabled={!msg.trim()}><Wand2 {...I} /> Interpretar mensagem</button>
       {faltou.length > 0 && <p className="aviso-parcial">Não achei: {faltou.join(", ")}. Preencha abaixo.</p>}
@@ -176,20 +181,21 @@ function Boletar({ setBoletas, form, setForm, editando, setEditando, contraparte
             <option value="">—</option>{TIMES.map((t) => <option key={t}>{t}</option>)}
           </select>
         </label>
-        <label className="campo">Odd
-          <input className="num" inputMode="decimal" value={form.odd} onChange={(e) => setForm({ ...form, odd: e.target.value })} />
+        <label className="campo">Lotes
+          <input className="num" inputMode="decimal" value={form.lotes} onChange={(e) => setForm({ ...form, lotes: e.target.value })} />
         </label>
-        <label className="campo">Volume (R$)
-          <input className="num" inputMode="decimal" value={form.volume} onChange={(e) => setForm({ ...form, volume: e.target.value })} />
+        <label className="campo">Preço (0–100)
+          <input className="num" inputMode="decimal" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} />
         </label>
         <label className="campo inteiro">Data
           <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
         </label>
       </div>
-      {valido && (
+      {sim && (
         <p className="previa">
-          Se o {form.time} for campeão: <Pnl v={liquidacao({ lado: form.lado, odd: valOdd, volume: valVol, time: "x" }, "x")} />
-          <br />Se não for: <Pnl v={liquidacao({ lado: form.lado, odd: valOdd, volume: valVol, time: "x" }, "y")} />
+          Notional <strong className="num">{brl(notional(sim))}</strong><br />
+          Se {form.time} for campeão: <Pnl v={liquidacao(sim, form.time)} /><br />
+          Se não for: <Pnl v={liquidacao(sim, null)} />
         </p>
       )}
       <button className="botao primario grande" onClick={registrar} disabled={!valido}>
@@ -199,7 +205,7 @@ function Boletar({ setBoletas, form, setForm, editando, setEditando, contraparte
   );
 }
 
-function Book({ boletas, contrapartes, mtmDe, oddsHoje, editar, excluir }) {
+function Book({ boletas, contrapartes, mtmDe, precos, editar, excluir }) {
   const [f, setF] = useGuardado("book:filtros", { time: "", contraparte: "", lado: "" });
   const linhas = boletas
     .filter((b) => (!f.time || b.time === f.time) && (!f.contraparte || b.contraparte === f.contraparte) && (!f.lado || b.lado === f.lado))
@@ -216,7 +222,7 @@ function Book({ boletas, contrapartes, mtmDe, oddsHoje, editar, excluir }) {
         {sel("contraparte", contrapartes.map((c) => [c, c]), "Contraparte")}
         {sel("lado", [["C", "Compra"], ["V", "Venda"]], "Lado")}
       </div>
-      <p className="resumo-lista">{linhas.length} de {boletas.length} boletas · {brl(linhas.reduce((s, b) => s + b.volume, 0))}</p>
+      <p className="resumo-lista">{linhas.length} de {boletas.length} boletas · notional {brl(linhas.reduce((s, b) => s + notional(b), 0))}</p>
       {linhas.length === 0 ? <div className="estado"><strong>Nenhuma boleta no filtro</strong>Limpe um dos filtros acima.</div> : (
         <ul className="lista">{linhas.map((b) => (
           <li key={b.id} className="cartao item">
@@ -227,9 +233,9 @@ function Book({ boletas, contrapartes, mtmDe, oddsHoje, editar, excluir }) {
               <span>{b.contraparte} · #{b.id} · {data(b.data)}</span>
             </div>
             <div className="item-linha">
-              <span className="num">{brl(b.volume)} @ {odd(b.odd)}</span>
-              <span className="num fraco">hoje {odd(oddsHoje[b.time])}</span>
+              <span className="num">{fmtQtd(b.lotes)} lotes a {fmtPreco(b.preco)} · {brl(notional(b))}</span>
               <span className="dir acoes-item">
+                <span className="num fraco">hoje {fmtPreco(precos[b.time])}</span>
                 <button className="icone" aria-label={`Editar boleta ${b.id}`} onClick={() => editar(b)}><Pencil {...I} /></button>
                 <button className="icone perigo" aria-label={`Excluir boleta ${b.id}`} onClick={() => excluir(b)}><Trash2 {...I} /></button>
               </span>
@@ -240,30 +246,30 @@ function Book({ boletas, contrapartes, mtmDe, oddsHoje, editar, excluir }) {
   );
 }
 
-function Mtm({ boletas, oddsHoje, setOddsHoje, total }) {
+function Mtm({ boletas, precos, setPrecos, total }) {
   const linhas = TIMES.map((t) => {
     const bs = boletas.filter((b) => b.time === t);
     return {
       time: t, n: bs.length,
-      c: bs.filter((b) => b.lado === "C").reduce((s, b) => s + b.volume, 0),
-      v: bs.filter((b) => b.lado === "V").reduce((s, b) => s + b.volume, 0),
-      pnl: bs.length ? bs.reduce((s, b) => s + (mtm(b, oddsHoje[t]) ?? 0), 0) : null,
+      c: bs.filter((b) => b.lado === "C").reduce((s, b) => s + b.lotes, 0),
+      v: bs.filter((b) => b.lado === "V").reduce((s, b) => s + b.lotes, 0),
+      pnl: bs.length ? bs.reduce((s, b) => s + (mtm(b, precos[t]) ?? 0), 0) : null,
     };
   }).sort((a, b) => b.n - a.n || a.time.localeCompare(b.time));
   return (
     <section>
-      <p className="resumo-lista">P&amp;L <Pnl v={total.pnl} /> · {pct(total.pnl, total.total)} do notional. Toque na odd para atualizar.</p>
+      <p className="resumo-lista">P&amp;L <Pnl v={total.pnl} /> · {pct(total.pnl, total.nocional)} do notional. Toque no preço para atualizar.</p>
       <ul className="lista cartao lista-densa">{linhas.map((l) => {
-        const o = oddsHoje[l.time];
+        const p = precos[l.time];
         return (
           <li key={l.time} className={`mtm-linha ${l.n ? "" : "sem-posicao"}`}>
             <div>
               <strong>{l.time}</strong>
-              <small>{l.n ? `C ${l.c ? brl(l.c) : "—"} · V ${l.v ? brl(l.v) : "—"}` : "sem posição"} · {o > 1 ? `${odd(100 / o)}%` : "—"}</small>
+              <small>{l.n ? `C ${l.c ? fmtQtd(l.c) : "—"} · V ${l.v ? fmtQtd(l.v) : "—"} lotes` : "sem posição"} · chance {p != null ? `${fmtPreco(p)}%` : "—"}</small>
             </div>
-            <input className="num odd-hoje" inputMode="decimal" defaultValue={o == null ? "" : odd(o)}
-              onBlur={(e) => { const n = numero(e.target.value); setOddsHoje({ ...oddsHoje, [l.time]: n > 1 ? n : undefined }); }}
-              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label={`Odd de hoje do ${l.time}`} />
+            <input className="num odd-hoje" inputMode="decimal" defaultValue={p == null ? "" : fmtPreco(p)}
+              onBlur={(e) => { const n = numero(e.target.value); setPrecos({ ...precos, [l.time]: precoValido(n) ? n : undefined }); }}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label={`Preço de hoje do ${l.time}`} />
             <span className="dir"><Pnl v={l.pnl} /></span>
           </li>);
       })}</ul>
@@ -295,7 +301,7 @@ function Payoff({ boletas }) {
       <h3 className="subtitulo">Boleta a boleta</h3>
       <ul className="lista cartao lista-densa">{boletas.map((b) => (
         <li key={b.id} className="item-linha">
-          <span><strong>{b.time}</strong> <Lado l={b.lado} /><br /><small className="fraco">{b.contraparte} · {brl(b.volume)} @ {odd(b.odd)}</small></span>
+          <span><strong>{b.time}</strong> <Lado l={b.lado} /><br /><small className="fraco">{b.contraparte} · {fmtQtd(b.lotes)} lotes a {fmtPreco(b.preco)}</small></span>
           <span className="dir"><Pnl v={liquidacao(b, campeao)} /></span>
         </li>))}
       </ul>
@@ -320,7 +326,7 @@ function Batimento({ boletas, mtmDe, status, setStatus }) {
         return (
           <li key={nome} className="cartao item">
             <div className="item-linha"><strong>{nome}</strong><span className="dir"><Pnl v={bs.reduce((s, b) => s + (mtmDe(b) ?? 0), 0)} /></span></div>
-            <div className="item-linha fraco"><span>{bs.length} boleta{bs.length === 1 ? "" : "s"} · {brl(bs.reduce((s, b) => s + b.volume, 0))}</span><span className="dir">saldo (MTM)</span></div>
+            <div className="item-linha fraco"><span>{bs.length} boleta{bs.length === 1 ? "" : "s"} · notional {brl(bs.reduce((s, b) => s + notional(b), 0))}</span><span className="dir">saldo (MTM)</span></div>
             <div className="cortes status">{STATUS.map((s) => (
               <button key={s} className={`st-${s}`} aria-pressed={st === s} onClick={() => setStatus({ ...status, [nome]: s })}>{s}</button>))}
             </div>
