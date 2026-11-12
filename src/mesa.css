@@ -1,0 +1,505 @@
+/* Mesa — tokens do design system Mesa (tokens.json), claro e escuro.
+   Os estilos de componente abaixo deles são o components/bundle.css do mesmo sistema. */
+:root, [data-theme="light"] {
+  --fundo: #f7f8fa; --painel: #ffffff; --painel-2: #fbfcfd; --borda: #e3e6ec; --borda-forte: #ccd2dc;
+  --texto: #16191f; --texto-2: #5b6472; --texto-3: #8b95a5;
+  --acento: #1c5ed6; --acento-fraco: #e8f0fe;
+  --compra: #0b7a52; --compra-fundo: #e4f4ed; --venda: #b4292b; --venda-fundo: #fceaea;
+  --alerta: #9a6407; --alerta-fundo: #fdf3e0;
+  --sombra: 0 1px 2px rgba(16, 22, 32, 0.05);
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --fundo: #0f1216; --painel: #171b21; --painel-2: #1b2028; --borda: #262c35; --borda-forte: #333b46;
+  --texto: #e6e9ee; --texto-2: #9aa4b2; --texto-3: #6b7686;
+  --acento: #5b9bff; --acento-fraco: #17253d;
+  --compra: #4ac48c; --compra-fundo: #10281f; --venda: #ef7b7d; --venda-fundo: #2b1516;
+  --alerta: #d8a94a; --alerta-fundo: #2a2113;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+:root {
+  --sombra-flutuante: 0 8px 24px rgba(16, 22, 32, 0.14);
+  --raio: 6px; --raio-controle: 5px; --raio-botao: 4px; --raio-selo: 3px;
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, monospace;
+  --font-mono-tabela: "Lucida Console", "Courier New", monospace;
+}
+html, body, #root { height: 100%; }
+
+/* Mesa — estilos de componente extraídos de frontend/src/styles.css.
+   Cores, raios e sombras vêm de tokens.css; espaçamentos ficam em px como na origem. */
+
+:root { --mono: var(--font-mono); }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 13px/1.45 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ---------- painel ---------- */
+.painel {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+.painel > header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 6px;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--borda);
+  background: var(--painel-2);
+}
+.painel > header h2 {
+  margin: 0;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--texto-2);
+}
+.painel > header .resumo {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--texto-3);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.rolagem { overflow: auto; min-height: 0; scrollbar-width: thin; }
+.painel.mercado { --mono: var(--font-mono-tabela); }
+
+/* ---------- faixa e chips ---------- */
+.faixa {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.faixa .identidade { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.faixa .descricao { display: grid; gap: 1px; min-width: 0; }
+.faixa .ticker { font-size: 21px; font-weight: 680; letter-spacing: -0.015em; font-family: var(--mono); }
+.faixa .linha-emissor { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.faixa .emissor {
+  color: var(--texto-2);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 30ch;
+}
+.faixa .rotulo {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--venda);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chips { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 0; }
+.chip { display: grid; gap: 1px; line-height: 1.25; text-align: center; }
+.chip dt {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-3);
+  font-weight: 600;
+}
+.chip dd {
+  margin: 0;
+  font-size: 12.5px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chip.destaque dd { color: var(--acento); font-weight: 620; }
+.chip.alerta dt, .chip.alerta dd { color: var(--venda); font-weight: 620; }
+
+/* ---------- botão copiar ---------- */
+.copiar {
+  flex: none;
+  padding: 1px 7px;
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-botao);
+  background: transparent;
+  color: var(--texto-3);
+  font-family: inherit;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.copiar:hover { color: var(--texto); border-color: var(--texto-3); }
+.copiar:focus-visible { outline: none; border-color: var(--acento); box-shadow: 0 0 0 2px var(--acento-fraco); }
+.copiar.copiado { color: var(--compra); border-color: var(--compra); }
+.copiar.erro { color: var(--venda); border-color: var(--venda); }
+
+/* ---------- selos e marcas ---------- */
+.selo {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--raio-selo);
+  font-size: 10.5px;
+  font-weight: 620;
+  letter-spacing: 0.02em;
+  background: var(--acento-fraco);
+  color: var(--acento);
+  font-family: inherit;
+}
+.contagem {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: var(--raio-selo);
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  color: var(--texto-3);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+.lado {
+  display: inline-block;
+  width: 18px;
+  text-align: center;
+  border-radius: var(--raio-selo);
+  font-weight: 700;
+  font-size: 11px;
+  font-family: var(--mono);
+}
+.lado.C { color: var(--compra); background: var(--compra-fundo); }
+.lado.V { color: var(--venda); background: var(--venda-fundo); }
+.classe {
+  display: inline-block;
+  width: 14px;
+  margin-right: 6px;
+  border-radius: var(--raio-selo);
+  font: 600 9px/14px var(--mono);
+  text-align: center;
+  color: var(--painel);
+}
+.classe.deb { background: var(--acento); }
+.classe.lf { background: var(--alerta); }
+.aviso-parcial {
+  font-size: 11px;
+  color: var(--alerta);
+  background: var(--alerta-fundo);
+  border-radius: var(--raio-botao);
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.variacao.sobe { color: var(--compra); }
+.variacao.desce { color: var(--venda); }
+
+/* ---------- grupo segmentado ---------- */
+.cortes {
+  display: flex;
+  gap: 4px;
+  background: var(--fundo);
+  padding: 2px;
+  border-radius: var(--raio-controle);
+  border: 1px solid var(--borda);
+}
+.cortes button {
+  border: 0;
+  background: none;
+  border-radius: var(--raio-botao);
+  padding: 4px 10px;
+  cursor: pointer;
+  font: 600 11.5px/1.3 var(--font-sans);
+  color: var(--texto-2);
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+.cortes button small { font-weight: 500; font-size: 9.5px; color: var(--texto-3); font-family: var(--mono); }
+.cortes button[aria-pressed="true"] { background: var(--painel); color: var(--texto); box-shadow: var(--sombra); }
+.cortes button[aria-pressed="true"] small { color: var(--acento); }
+
+/* ---------- alternador ---------- */
+.alternador {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 3px 9px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-controle);
+  background: var(--fundo);
+  color: var(--texto-2);
+  font: 600 11px/1.3 var(--font-sans);
+  cursor: pointer;
+}
+.alternador:hover:not(:disabled) { border-color: var(--borda-forte); }
+.alternador[aria-pressed="true"] { background: var(--acento-fraco); border-color: var(--acento); color: var(--acento); }
+.alternador[aria-pressed="true"] .contagem { border-color: var(--acento); color: var(--acento); background: transparent; }
+.alternador:disabled { opacity: 0.45; cursor: default; }
+
+/* ---------- busca ---------- */
+.busca { position: relative; min-width: 210px; }
+.busca input {
+  width: 100%;
+  padding: 7px 10px;
+  font: 600 13px/1 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto);
+  background: var(--fundo);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-controle);
+  outline: none;
+}
+.busca input:focus { border-color: var(--acento); box-shadow: 0 0 0 3px var(--acento-fraco); }
+.busca .atalho {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--texto-3);
+  pointer-events: none;
+}
+.sugestoes {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  min-width: 340px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--painel);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-controle);
+  box-shadow: var(--sombra-flutuante);
+  padding: 3px;
+}
+.sugestoes button {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--raio-botao);
+  background: none;
+  color: var(--texto);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.sugestoes button:hover, .sugestoes button[aria-selected="true"] { background: var(--acento-fraco); }
+.sugestoes .cod { font-family: var(--mono); font-weight: 640; font-size: 12px; }
+.sugestoes .nome { color: var(--texto-2); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filtro-gestora {
+  min-width: 90px;
+  flex: 0 1 150px;
+  padding: 4px 8px;
+  font: 500 11.5px/1.3 var(--font-sans);
+  color: var(--texto);
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-controle);
+  outline: none;
+}
+.filtro-gestora:focus { border-color: var(--acento); box-shadow: 0 0 0 2px var(--acento-fraco); }
+
+/* ---------- tabelas ---------- */
+.pontas, .niveis, .matriz { width: 100%; border-collapse: collapse; }
+.pontas thead th, .niveis thead th, .matriz thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--painel-2);
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-3);
+  font-weight: 600;
+  text-align: right;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--borda);
+}
+.pontas thead th:first-child, .niveis thead th:first-child, .matriz thead th:first-child { text-align: left; }
+.pontas th.texto, .pontas td.texto, .matriz th.texto, .matriz td.texto { text-align: left; }
+.pontas td { padding: 4px 12px; border-bottom: 1px solid var(--borda); }
+.pontas tbody tr:hover, .niveis tbody tr:hover { background: var(--painel-2); }
+.pontas .cliente { font-weight: 560; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pontas td.fraco { color: var(--texto-2); }
+.niveis thead th { padding: 4px 8px 3px; z-index: 3; }
+.niveis td { padding: 4px 8px; border-top: 1px solid var(--borda); }
+.niveis .taxa { font-weight: 640; font-size: 12.5px; text-align: left; color: var(--acento); }
+.spread { font-size: 11px; color: var(--texto-2); font-family: var(--mono); white-space: nowrap; }
+.niveis .spread { text-align: center; font-size: 12.5px; }
+.niveis .spread.preenchida { color: var(--venda); font-weight: 600; }
+.dia > .cabecalho > th {
+  padding: 6px 6px;
+  background: var(--painel-2);
+  border-bottom: 1px solid var(--borda);
+  font-weight: 400;
+}
+.dia > .cabecalho > .data { text-align: left; font-weight: 640; font-size: 12px; font-family: var(--mono); }
+.dia > .cabecalho > .agregado { text-align: right; font-size: 11px; color: var(--texto-2); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.matriz td { padding: 4px 10px; border-bottom: 1px solid var(--borda); }
+.matriz td.texto { font-size: 11px; font-family: var(--mono); color: var(--texto-2); white-space: nowrap; }
+.matriz td.gestora { background: var(--painel); font-weight: 550; max-width: 30ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matriz tbody tr:hover td { background: var(--painel-2); }
+.matriz td.ref { font-weight: 640; }
+.matriz td.zero { color: var(--texto-3); }
+.matriz th.ordenavel { cursor: pointer; user-select: none; }
+.matriz th.ordenavel:hover { color: var(--texto); }
+.matriz th.ordenando { color: var(--acento); }
+.cab-centro thead th, .cab-centro thead th.texto, .cab-centro thead th:first-child { text-align: center; }
+
+/* ---------- estados ---------- */
+.estado {
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--texto-3);
+  font-size: 12px;
+}
+.estado strong { color: var(--texto-2); font-weight: 600; font-size: 13px; }
+.estado code {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-botao);
+  padding: 2px 6px;
+}
+.carregando {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--acento), transparent);
+  background-size: 40% 100%;
+  animation: desliza 1.1s ease-in-out infinite;
+}
+@keyframes desliza { 0% { background-position: -40% 0; } 100% { background-position: 140% 0; } }
+
+/* ---------- aba lateral ---------- */
+.aba-lateral {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+  width: 24px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-2);
+  color: var(--texto-2);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.aba-lateral span { writing-mode: vertical-rl; }
+.aba-lateral:hover, .aba-lateral.ativa { color: var(--acento); border-color: var(--acento); }
+.aba-lateral:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
+
+/* ---------- app: book do Brasileirão ---------- */
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; gap: 10px; padding: 10px; }
+.corpo { display: grid; grid-template-columns: minmax(300px, 360px) 1fr; gap: 10px; min-height: 0; }
+.faixa .ticker { font-family: var(--font-sans); }
+.faixa .cortes.modo { margin-left: auto; }
+.chip .pct { font-size: 11px; color: var(--texto-2); }
+.centro { text-align: center; }
+
+.boletagem { display: grid; align-content: start; gap: 10px; padding: 12px; }
+.campo { display: grid; gap: 4px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-3); }
+.campo input, .campo select, .campo textarea, .mensagem textarea, .odd-hoje {
+  font: 400 13px/1.4 var(--font-sans); text-transform: none; letter-spacing: 0;
+  color: var(--texto); background: var(--fundo);
+  border: 1px solid var(--borda-forte); border-radius: var(--raio-controle);
+  padding: 6px 8px; outline: none; width: 100%;
+}
+.campo input.num, .odd-hoje { font-family: var(--font-mono); font-size: 12px; text-align: right; }
+.campo textarea { resize: vertical; font-family: var(--font-mono); font-size: 12px; }
+.campo input:focus, .campo select:focus, .campo textarea:focus, .odd-hoje:focus { border-color: var(--acento); box-shadow: 0 0 0 3px var(--acento-fraco); }
+.conferencia { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.conferencia .campo:first-child, .conferencia .campo:nth-child(2) { grid-column: 1 / -1; }
+.conferencia .cortes button { flex: 1; text-align: center; }
+.cortes button.lado-C[aria-pressed="true"] { color: var(--compra); background: var(--compra-fundo); }
+.cortes button.lado-V[aria-pressed="true"] { color: var(--venda); background: var(--venda-fundo); }
+.previa { margin: 0; font-size: 11px; color: var(--texto-2); }
+.acoes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.boletagem .aviso-parcial { margin: 0; white-space: normal; }
+
+.botao {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px 12px; border: 1px solid var(--borda-forte); border-radius: var(--raio-controle);
+  background: var(--painel); color: var(--texto); font: 600 11.5px/1.3 var(--font-sans);
+  cursor: pointer; text-decoration: none;
+}
+.botao:hover:not(:disabled) { border-color: var(--texto-3); }
+.botao.primario { background: var(--acento); border-color: var(--acento); color: var(--painel); }
+.botao:disabled { opacity: 0.45; cursor: default; }
+.botao:focus-visible, .icone:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
+.copiar { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; }
+.icone { border: 0; background: none; color: var(--texto-3); padding: 3px; border-radius: var(--raio-botao); cursor: pointer; display: inline-flex; }
+.icone:hover { color: var(--acento); background: var(--acento-fraco); }
+.icone.perigo:hover { color: var(--venda); background: var(--venda-fundo); }
+
+.lado.largo { width: auto; white-space: nowrap; padding: 1px 6px; font-size: 10.5px; letter-spacing: 0.02em; }
+.pontas td.num { font-size: 12px; }
+.pontas tr.sem-posicao td { color: var(--texto-3); }
+.pontas tr.atual td { background: var(--acento-fraco); }
+.odd-hoje { width: 84px; padding: 3px 6px; }
+
+.cortes.status { display: inline-flex; }
+.cortes.status button { padding: 3px 8px; font-size: 11px; }
+.cortes.status .st-Batido[aria-pressed="true"] { color: var(--compra); background: var(--compra-fundo); }
+.cortes.status .st-Descasado[aria-pressed="true"] { color: var(--venda); background: var(--venda-fundo); }
+.mensagem { padding: 12px; display: grid; gap: 8px; border-top: 1px solid var(--borda); }
+.mensagem textarea { font-family: var(--font-mono); font-size: 12px; resize: vertical; }
+
+.payoff-corpo { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(0, 1.3fr); gap: 12px; padding: 12px; align-content: start; }
+.barras { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.barras li { display: grid; grid-template-columns: 96px 1fr 104px; align-items: center; gap: 8px; padding: 2px 4px; border-radius: var(--raio-botao); cursor: pointer; font-size: 12px; }
+.barras li:hover { background: var(--painel-2); }
+.barras li.atual { background: var(--acento-fraco); }
+.barras li.atual .nome-barra { color: var(--acento); font-weight: 640; }
+.trilho { position: relative; height: 12px; }
+.trilho .meio { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--borda-forte); }
+.barra { position: absolute; top: 0; bottom: 0; border-radius: var(--raio-selo); }
+.barra.pos { background: var(--compra); }
+.barra.neg { background: var(--venda); }
+.titulo-tabela { margin: 0 0 8px; font-size: 12.5px; }
+
+@media (max-width: 1180px) {
+  .app { height: auto; }
+  .corpo, .payoff-corpo { grid-template-columns: 1fr; }
+  .painel { max-height: 80vh; }
+}
