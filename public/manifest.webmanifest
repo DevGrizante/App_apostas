@@ -1,13 +1,13 @@
 {
-  "name": "Book Brasileirão",
+  "name": "Book",
   "short_name": "Book",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0f1216",
-  "theme_color": "#171b21",
+  "background_color": "#0d1726",
+  "theme_color": "#0d1726",
   "icons": [
     { "src": "icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]

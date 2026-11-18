@@ -1,6 +1,5 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
-import "./mesa.css";
-import "./app.css";
+import "./estilo.css";
 
 createRoot(document.getElementById("root")).render(<App />);

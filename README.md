@@ -1,6 +1,11 @@
 # Book Brasileirão
 
-Book de apostas de campeão do Brasileirão Série A fechadas no WhatsApp: boletagem a partir da mensagem, book filtrável, marcação a mercado, payoff por campeão e batimento mensal por contraparte. Visual do design system **Mesa**.
+Book de apostas de campeão fechadas no WhatsApp: boletagem a partir da mensagem, book filtrável, marcação a mercado, payoff por campeão e batimento por contraparte. Começa pela escolha da competição (hoje só o Brasileirão 2026).
+
+## Visual
+- Cores da bandeira com significado: anil é o fundo, amarelo é ação, verde é ganho, vermelho é perda. Tokens em `src/estilo.css`, tema claro e escuro.
+- Números em Barlow Condensed (o "placar"), texto em Barlow, via Google Fonts; sem rede, cai na fonte do sistema.
+- Telas em `src/telas/`, peças comuns em `src/comum.jsx`, dados de exemplo e competições em `src/dados.js`.
 
 ```
 npm install
