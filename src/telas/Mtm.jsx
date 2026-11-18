@@ -22,14 +22,16 @@ export default function Mtm({ boletas, precos, setPrecos, totais }) {
   }).sort((a, b) => b.n - a.n || a.time.localeCompare(b.time));
 
   return (
-    <section className="tela">
-      <div className="resumo-tela">
-        <span>Resultado se zerar tudo hoje</span>
-        <Pnl v={totais.pnl} className="medio" />
-        <span className="sub">{pct(totais.pnl, totais.nocional)} do notional</span>
+    <section className="tela duas">
+      <div className="lateral">
+        <div className="resumo-tela">
+          <span>Resultado se zerar tudo hoje</span>
+          <Pnl v={totais.pnl} className="medio" />
+          <span className="sub">{pct(totais.pnl, totais.nocional)} do notional</span>
+        </div>
+        <p className="dica">Toque no preço de hoje para atualizar. De 0 a 100, ele também é a chance do time.</p>
       </div>
-      <p className="dica">Toque no preço de hoje para atualizar. De 0 a 100, ele também é a chance do time.</p>
-      <ul className="lista">{linhas.map((l) => {
+      <ul className="lista principal">{linhas.map((l) => {
         const p = precos[l.time];
         return (
           <li key={l.time} className={`linha-mtm ${l.n ? "" : "sem-posicao"}`}>

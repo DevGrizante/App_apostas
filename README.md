@@ -6,6 +6,12 @@ Book de apostas de campeão fechadas no WhatsApp: boletagem a partir da mensagem
 - Cores da bandeira com significado: anil é o fundo, amarelo é ação, verde é ganho, vermelho é perda. Tokens em `src/estilo.css`, tema claro e escuro.
 - Números em Barlow Condensed (o "placar"), texto em Barlow, via Google Fonts; sem rede, cai na fonte do sistema.
 - Telas em `src/telas/`, peças comuns em `src/comum.jsx`, dados de exemplo e competições em `src/dados.js`.
+- Celular: abas embaixo e botão "+" no centro. Computador (900px ou mais): barra lateral; de 1180px as telas abrem em duas colunas.
+
+## Senha
+- Criada no primeiro acesso, uma por aparelho, e pedida sempre que o app abre (`src/senha.js`, `src/telas/Senha.jsx`).
+- Guarda só o hash PBKDF2. Tranca a tela, não cifra as boletas: o link abre para qualquer um, só que sem os dados de outro aparelho.
+- "Esqueci a senha" apaga todos os dados do app naquele aparelho (fica só o tema).
 
 ```
 npm install

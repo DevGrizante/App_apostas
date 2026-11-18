@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Gauge, Plus, Users } from "lucide-react";
+import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Gauge, Lock, Plus, Users } from "lucide-react";
 import { mtm, notional } from "./logica.js";
 import { COMPETICOES } from "./dados.js";
 import { I, Pnl, TemaBotao, ler, useGuardado } from "./comum.jsx";
@@ -8,18 +8,35 @@ import Book from "./telas/Book.jsx";
 import Mtm from "./telas/Mtm.jsx";
 import Payoff from "./telas/Payoff.jsx";
 import Batimento from "./telas/Batimento.jsx";
+import Senha from "./telas/Senha.jsx";
 
 const ABAS = [["Book", BookOpen], ["MTM", Gauge], ["Nova", Plus], ["Payoff", BarChart3], ["Batimento", Users]];
 const COR_BARRA = { dark: "#0d1726", light: "#eef1f6" };
 
+// Destrancado vale para a aba aberta: fechar o app e abrir de novo pede a senha.
+const ABERTO = "book:aberto";
+const lerAberto = () => { try { return sessionStorage.getItem(ABERTO) === "1"; } catch { return false; } };
+const gravarAberto = (v) => { try { v ? sessionStorage.setItem(ABERTO, "1") : sessionStorage.removeItem(ABERTO); } catch { /* sem storage */ } };
+
 export default function App() {
   const [tema, setTema] = useGuardado("book:tema", "dark");
+  const [registro, setRegistro] = useGuardado("book:senha", null);
+  const [aberto, setAberto] = useState(lerAberto);
   const [comp, setComp] = useState(null);
   useEffect(() => {
     document.documentElement.dataset.theme = tema;
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COR_BARRA[tema] ?? COR_BARRA.dark);
   }, [tema]);
-  if (!comp) return <Inicio tema={tema} setTema={setTema} escolher={setComp} />;
+
+  function abrir() { gravarAberto(true); setAberto(true); }
+  function trancar() { gravarAberto(false); setComp(null); setAberto(false); }
+  function apagarTudo() {
+    try { Object.keys(localStorage).filter((k) => k.startsWith("book:") && k !== "book:tema").forEach((k) => localStorage.removeItem(k)); } catch { /* sem storage */ }
+    setRegistro(null);
+  }
+
+  if (!aberto || !registro) return <Senha registro={registro} salvarRegistro={setRegistro} abrir={abrir} apagarTudo={apagarTudo} />;
+  if (!comp) return <Inicio tema={tema} setTema={setTema} escolher={setComp} trancar={trancar} />;
   return <Torneio key={comp.id} comp={comp} voltar={() => setComp(null)} tema={tema} setTema={setTema} />;
 }
 
@@ -30,12 +47,15 @@ function resumo(c) {
   return { n: boletas.length, pnl: boletas.reduce((s, b) => s + (mtm(b, precos[b.time]) ?? 0), 0) };
 }
 
-function Inicio({ tema, setTema, escolher }) {
+function Inicio({ tema, setTema, escolher, trancar }) {
   return (
     <div className="app sem-abas">
       <header className="topo inicio">
         <h1 className="marca">Book</h1>
-        <TemaBotao tema={tema} setTema={setTema} />
+        <span className="acoes-topo">
+          <button className="icone" aria-label="Trancar o app" onClick={trancar}><Lock {...I} /></button>
+          <TemaBotao tema={tema} setTema={setTema} />
+        </span>
       </header>
       <main className="conteudo">
         <ul className="competicoes">{COMPETICOES.map((c) => {
@@ -115,7 +135,7 @@ function Torneio({ comp, voltar, tema, setTema }) {
         {ABAS.map(([nome, Icone]) => (nome === "Nova" ? (
           <button key={nome} className="aba-nova" aria-label="Nova boleta" aria-current={atual === "Nova" ? "page" : undefined}
             onClick={() => { if (editando != null || atual !== "Nova") novaBoleta(); }}>
-            <Plus size={28} strokeWidth={2.25} />
+            <Plus size={28} strokeWidth={2.25} /><span className="rotulo-nova">Nova boleta</span>
           </button>
         ) : (
           <button key={nome} className="aba" aria-current={atual === nome ? "page" : undefined} onClick={() => setAba(nome)}>

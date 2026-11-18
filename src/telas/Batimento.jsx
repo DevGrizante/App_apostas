@@ -20,7 +20,7 @@ export default function Batimento({ boletas, mtmDe, status, setStatus }) {
   return (
     <section className="tela">
       <p className="dica">{batidas} de {grupos.length} contrapartes batidas</p>
-      <ul className="lista">{grupos.map(([nome, bs]) => {
+      <ul className="lista contrapartes">{grupos.map(([nome, bs]) => {
         const st = status[nome] ?? "Pendente";
         const texto = aberto === nome ? mensagemBatimento(nome, bs, mtmDe) : "";
         return (

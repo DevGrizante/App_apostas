@@ -18,7 +18,8 @@ export default function Book({ boletas, totais, precos, mtmDe, contrapartes, edi
   );
 
   return (
-    <section className="tela">
+    <section className="tela duas">
+      <div className="lateral">
       <div className="placar">
         <span className="placar-rotulo">Resultado se zerar tudo hoje</span>
         <Pnl v={totais.pnl} className="enorme" />
@@ -37,6 +38,9 @@ export default function Book({ boletas, totais, precos, mtmDe, contrapartes, edi
           {sel("lado", [["C", "Compras"], ["V", "Vendas"]], "Compras e vendas")}
         </div>
       )}
+      </div>
+
+      <div className="principal">
 
       {boletas.length === 0 ? (
         <div className="vazio">
@@ -67,6 +71,7 @@ export default function Book({ boletas, totais, precos, mtmDe, contrapartes, edi
         </ul>
       )}
       {filtrando && linhas.length > 0 && <p className="rodape">{linhas.length} de {boletas.length} boletas</p>}
+      </div>
     </section>
   );
 }

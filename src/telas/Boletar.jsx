@@ -56,7 +56,7 @@ export default function Boletar({ form, setForm, editando, contrapartes, salvar,
   }
 
   return (
-    <section className="tela">
+    <section className={`tela ${editando == null ? "duas" : ""}`}>
       <h2 className="titulo-tela">{editando != null ? `Editar boleta #${editando}` : "Nova boleta"}</h2>
       {aviso && (
         <p className={`aviso ${aviso.tipo}`} role="status">
@@ -66,7 +66,7 @@ export default function Boletar({ form, setForm, editando, contrapartes, salvar,
       )}
 
       {editando == null && (
-        <div className="bloco">
+        <div className="bloco lateral">
           <label className="campo">Mensagem do WhatsApp
             <textarea rows={3} value={msg} onChange={(e) => { setMsg(e.target.value); setAviso(null); }} placeholder="Tomei 200 lotes de Flamengo a 85 com Rodrigo" />
           </label>
@@ -78,6 +78,7 @@ export default function Boletar({ form, setForm, editando, contrapartes, salvar,
         </div>
       )}
 
+      <div className="principal">
       <div className="bloco">
         <div className="segmento" role="group" aria-label="Lado">
           {[["C", "Compra"], ["V", "Venda"]].map(([l, nome]) => (
@@ -124,6 +125,7 @@ export default function Boletar({ form, setForm, editando, contrapartes, salvar,
           <button className="botao perigo" onClick={apagar}><Trash2 {...I} /> Excluir</button>
         </div>
       )}
+      </div>
     </section>
   );
 }

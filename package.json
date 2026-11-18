@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "check": "node src/logica.check.js"
+    "check": "node src/logica.check.js && node src/senha.check.js"
   },
   "dependencies": {
     "lucide-react": "0.468.0",
